@@ -1,19 +1,43 @@
 #!/bin/bash
 
-## Prereq:  You need to create an ssh-key in the region you plan on doing this in
-#              then retrieve the name of the key
-export CLUSTER_NAME="spongbob"
+# NOTE/WARNING:  make sure you are authenticated/authorized to the right IAM principle
+#                and... kubeconfig is updated!
+
+
+# UPDATE THESE VALUES
+export CLUSTER_NAME="eksipv6"
 export ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 export REGION="us-east-1"
-export SSH_KEY_NAME="my-ipv6-sshkey" 
+export SSH_KEY_NAME="$CLUSTER_NAME-sshkey" 
 
-# Get your accountId from this command (I am not going to spend time adding the --query ;-)
-aws sts get-caller-identity
+# You can view your accountId from this command (I am not going to spend time adding the --query ;-)
+echo "aws sts get-caller-identity"
 
+# Display current values
+echo "
+CLUSTER_NAME $CLUSTER_NAME
+ACCOUNT_ID $ACCOUNT_ID
+REGION $REGION
+SSH_KEY_NAME $SSH_KEY_NAME"
+
+seconds=10
+echo "Review values (above).  Pausing for $seconds seconds... Press CTRL-C if these are not correct"
+for ((i=seconds; i>0; i--)); do
+  echo -ne "$i seconds remaining...\r"
+  echo 
+  sleep 1
+done
+echo -ne "\nTime's up!\n  Moving along."
+
+exit 0
+
+# *******************************************************************
 # Create an SSH key - you probably won't actually need this, but the examples expect one
 aws ec2 create-key-pair --key-name $SSH_KEY_NAME --query 'KeyMaterial' --output text > $SSH_KEY_NAME.pem
+aws ec2 describe-key-pairs --region $REGION --key-names "$SSH_KEY_NAME" --query "KeyPairs[*].KeyName" --output text
 
-## DOUBLE CHECK THIS COMMAND REPLACES ALL THE VARS WITH THE VALUES
+# *******************************************************************
+## Build your cluster (using the values from above)
 cat << EOF | tee cluster.yaml
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
@@ -59,10 +83,15 @@ managedNodeGroups:
       maxUnavailablePercentage: 33
 EOF
 
+# This command will not return the shell until the cluster is built
 eksctl create cluster -f cluster.yaml
+sleep 3
 
+# Update your kubeconfig
+aws eks update-kubeconfig --region ${REGION} --name ${CLUSTER_NAME}
+kubectl get nodes
 
-
+# *******************************************************************
 # Add LoadBalancer Controller
 # https://docs.aws.amazon.com/eks/latest/userguide/lbc-helm.html
 curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.12.0/docs/install/iam_policy.json
@@ -71,13 +100,16 @@ aws iam create-policy \
     --policy-document file://iam_policy.json
 
 eksctl create iamserviceaccount \
-    --cluster=$CLUSTER_NAME \
+    --cluster=${CLUSTER_NAME} \
     --namespace=kube-system \
     --name=aws-load-balancer-controller \
-    --attach-policy-arn=arn:aws:iam::$ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy \
+    --attach-policy-arn=arn:aws:iam::${ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy \
     --override-existing-serviceaccounts \
-    --region $REGION \
+    --region ${REGION} \
     --approve
+## TODO:  add check here to pause until CFN from last create has completed
+
+eksctl  get iamserviceaccount --cluster my-ipv6-cluster
 
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update eks
