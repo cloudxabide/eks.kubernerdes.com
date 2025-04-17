@@ -67,7 +67,7 @@ addons:
     version: latest
 
 managedNodeGroups:
-  - name: m6i-xlarge-mng
+  - name: m6-xlarge-mng
     amiFamily: AmazonLinux2023
     instanceTypes: [ "m6i.xlarge", "m6a.xlarge" ]
     minSize: 1
