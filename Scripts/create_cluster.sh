@@ -29,8 +29,6 @@ for ((i=seconds; i>0; i--)); do
 done
 echo -ne "\nTime's up!\n  Moving along."
 
-exit 0
-
 # *******************************************************************
 # Create an SSH key - you probably won't actually need this, but the examples expect one
 aws ec2 create-key-pair --key-name $SSH_KEY_NAME --query 'KeyMaterial' --output text > $SSH_KEY_NAME.pem
@@ -100,30 +98,38 @@ aws iam create-policy \
     --policy-document file://iam_policy.json
 
 eksctl create iamserviceaccount \
-    --cluster=${CLUSTER_NAME} \
-    --namespace=kube-system \
-    --name=aws-load-balancer-controller \
-    --attach-policy-arn=arn:aws:iam::${ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy \
-    --override-existing-serviceaccounts \
-    --region ${REGION} \
-    --approve
-## TODO:  add check here to pause until CFN from last create has completed
+    --cluster=${CLUSTER_NAME} \
+    --namespace=kube-system \
+    --name=aws-load-balancer-controller \
+    --attach-policy-arn=arn:aws:iam::${ACCOUNT_ID}:policy/AWSLoadBalancerControllerIAMPolicy \
+    --override-existing-serviceaccounts \
+    --region ${REGION} \
+    --approve
 
-eksctl  get iamserviceaccount --cluster my-ipv6-cluster
+## TODO:  add check here to pause until CFN from last create has completed
+aws cloudformation describe-stacks \
+  --stack-name eksctl-${CLUSTER_NAME}-addon-iamserviceaccount-kube-system-aws-load-balancer-controller \
+  --query "Stacks[0].StackStatus" \
+  --output text
+
+eksctl  get iamserviceaccount --cluster ${CLUSTER_NAME}
+
 
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update eks
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
-  -n kube-system \
-  --set clusterName=$CLUSTER_NAME \
-  --set serviceAccount.create=false \
-  --set serviceAccount.name=aws-load-balancer-controller
+  -n kube-system \
+  --set clusterName=${CLUSTER_NAME} \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller
+
 wget https://raw.githubusercontent.com/aws/eks-charts/master/stable/aws-load-balancer-controller/crds/crds.yaml
 kubectl apply -f crds.yaml
 kubectl get deployment -n kube-system aws-load-balancer-controller
 
 ## Deploy sample app
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/examples/2048/2048_full_dualstack.yaml
+sleep 10
 export GAME_2048=$(kubectl get ingress/ingress-2048 -n game-2048 -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 echo http://${GAME_2048}
 
