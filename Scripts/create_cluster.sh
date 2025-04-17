@@ -114,7 +114,6 @@ aws cloudformation describe-stacks \
 
 eksctl  get iamserviceaccount --cluster ${CLUSTER_NAME}
 
-
 helm repo add eks https://aws.github.io/eks-charts
 helm repo update eks
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
@@ -132,6 +131,11 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-bala
 sleep 10
 export GAME_2048=$(kubectl get ingress/ingress-2048 -n game-2048 -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 echo http://${GAME_2048}
+
+aws elbv2 describe-load-balancers \
+  --region ${REGION}  \
+  --query "LoadBalancers[?starts_with(LoadBalancerName, 'k8s-game2048-ingress2')].[LoadBalancerName, State.Code]" \
+  --output table
 
 exit 0
 
