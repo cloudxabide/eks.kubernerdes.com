@@ -10,6 +10,7 @@ export SSH_KEY_NAME="my-ipv6-sshkey"
 # Get your accountId from this command (I am not going to spend time adding the --query ;-)
 aws sts get-caller-identity
 
+# Create an SSH key - you probably won't actually need this, but the examples expect one
 aws ec2 create-key-pair --key-name $SSH_KEY_NAME --query 'KeyMaterial' --output text > $SSH_KEY_NAME.pem
 
 ## DOUBLE CHECK THIS COMMAND REPLACES ALL THE VARS WITH THE VALUES
