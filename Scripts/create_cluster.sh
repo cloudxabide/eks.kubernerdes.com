@@ -93,5 +93,5 @@ exit 0
 ## References
 https://aws.amazon.com/blogs/containers/amazon-eks-launches-ipv6-support/ (a bit dated now)A
 https://docs.aws.amazon.com/eks/latest/userguide/lbc-helm.html
-
+https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html (deploy sample app)
 
