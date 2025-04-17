@@ -87,6 +87,10 @@ wget https://raw.githubusercontent.com/aws/eks-charts/master/stable/aws-load-bal
 kubectl apply -f crds.yaml
 kubectl get deployment -n kube-system aws-load-balancer-controller
 
+## Deploy sample app
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/examples/2048/2048_full_dualstack.yaml
+export GAME_2048=$(kubectl get ingress/ingress-2048 -n game-2048 -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo http://${GAME_2048}
 
 exit 0
 
