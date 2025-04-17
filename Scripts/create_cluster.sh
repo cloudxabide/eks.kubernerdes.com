@@ -6,10 +6,11 @@
 
 # UPDATE THESE VALUES
 export CLUSTER_NAME="eksipv6"
-export ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 export REGION="us-east-1"
 export SSH_KEY_NAME="$CLUSTER_NAME-sshkey" 
 
+# Get your accountId
+export ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 # You can view your accountId from this command (I am not going to spend time adding the --query ;-)
 echo "aws sts get-caller-identity"
 
